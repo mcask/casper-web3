@@ -44,7 +44,11 @@
   "keywords": [
     "casper-web3"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "casper-js-sdk": "2.5.1",
+    "borsh": "^0.4.0",
+    "buffer": "6.0.1"
+  },
   "devDependencies": {
     "@babel/cli": "7.4.4",
     "@babel/core": "7.4.5",
