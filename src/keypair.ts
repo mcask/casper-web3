@@ -1,5 +1,7 @@
 // @flow
-import { Ed25519 } from "casper-js-sdk/dist/lib/Keys";
+import * as nacl from "tweetnacl";
+
+import { AsymmetricKey, Ed25519 } from "casper-js-sdk/dist/lib/Keys";
 import PublicKey from "./publickey";
 
 /**
@@ -47,6 +49,43 @@ class Keypair {
   }
 
   /**
+   * Create a keypair from a raw secret key byte array.
+   *
+   * This method should only be used to recreate a keypair from a previously
+   * generated secret key. Generating keypairs from a random seed should be done
+   * with the {@link Keypair.fromSeed} method.
+   *
+   * @throws error if the provided secret key is invalid and validation is not skipped.
+   *
+   * @param secretKey secret key byte array
+   * @param options: skip secret key validation
+   */
+  static fromSecretKey(
+    secretKey: Uint8Array,
+    options?: { skipValidation?: boolean }
+  ): Keypair {
+    const keypair = nacl.sign.keyPair.fromSecretKey(secretKey);
+    if (!options || !options.skipValidation) {
+      const encoder = new TextEncoder();
+      const signData = encoder.encode("@casper/key-validation-input");
+      const signature = nacl.sign.detached(signData, keypair.secretKey);
+      if (!nacl.sign.detached.verify(signData, signature, keypair.publicKey)) {
+        throw new Error("provided secretKey is invalid");
+      }
+    }
+    return new Keypair(keypair);
+  }
+
+  /**
+   * Generate a keypair from a 32 byte seed.
+   *
+   * @param seed seed byte array
+   */
+  static fromSeed(seed: Uint8Array): Keypair {
+    return new Keypair(nacl.sign.keyPair.fromSeed(seed));
+  }
+
+  /**
    * The public key for this keypair
    */
   get publicKey(): PublicKey {
@@ -58,6 +97,13 @@ class Keypair {
    */
   get secretKey(): Uint8Array {
     return this._v.privateKey;
+  }
+
+  /**
+   * Casper implementation specific key
+   */
+  get value(): AsymmetricKey {
+    return this._v;
   }
 }
 
